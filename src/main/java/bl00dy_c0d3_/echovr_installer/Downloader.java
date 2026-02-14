@@ -252,7 +252,7 @@ public class Downloader implements Runnable {
         servers[1] = "https://evr.echo.taxi/";
         String testFile = "randomDownloadTestFile";
 
-        labelProgress.setText("Testing download servers...");
+        labelProgress.setText("Server Test");
         frame.repaint();
         System.out.println("Server Test started");
 
