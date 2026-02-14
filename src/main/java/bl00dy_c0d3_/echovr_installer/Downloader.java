@@ -160,6 +160,25 @@ public class Downloader implements Runnable {
             if (platform == 0) {
                 UnzipFile.unzip(frame, frameMain, localFilePath + "\\" + filename, localFilePath);
                 JOptionPane.showMessageDialog(frame, "<html>Installation is done. Path is:<br>" + localFilePath + "</html>", "Notification", JOptionPane.INFORMATION_MESSAGE);
+
+                // Suggest adding to Start and Taskbar
+                String exePath = localFilePath + "\\ready-at-dawn-echo-arena\\bin\\win10\\echovr.exe";
+                int result = JOptionPane.showConfirmDialog(frame,
+                        "Would you like to add Echo VR to your Start Menu and Taskbar?\n\nThis will add: " + exePath,
+                        "Add Echo VR Shortcut?",
+                        JOptionPane.YES_NO_OPTION);
+                if (result == JOptionPane.YES_OPTION) {
+                    try {
+                        // Add to Start Menu
+                        String startShortcut = System.getenv("APPDATA") + "\\Microsoft\\Windows\\Start Menu\\Programs\\Echo VR.lnk";
+                        Helpers.createWindowsShortcut(exePath, startShortcut, "Echo VR");
+                        // Pin to Taskbar (Windows 10+ only, best effort)
+                        Helpers.pinToTaskbar(exePath);
+                        JOptionPane.showMessageDialog(frame, "Shortcut added to Start Menu.\nYou may need to pin it to Taskbar manually if it does not appear.", "Shortcut Created", JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(frame, "Failed to create shortcut: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
             } else if (platform == 3) {
                 JOptionPane.showMessageDialog(frame, "<html>Installation is done. Path is:<br>" + localFilePath + "</html>", "Notification", JOptionPane.INFORMATION_MESSAGE);
             }
@@ -233,17 +252,21 @@ public class Downloader implements Runnable {
         servers[1] = "https://evr.echo.taxi/";
         String testFile = "randomDownloadTestFile";
 
-        labelProgress.setText("Server Test");
+        labelProgress.setText("Testing download servers...");
         frame.repaint();
         System.out.println("Server Test started");
 
         String fastestServer = null;
         long fastestTime = Long.MAX_VALUE;
 
-
+        int serverCount = servers.length;
+        int tested = 0;
         for (String server : servers) {
+            tested++;
+            labelProgress.setText("Testing server " + tested + "/" + serverCount);
+            frame.repaint();
             System.out.println("Testing server: " + server);
-            long timeTaken = measureDownloadSpeed(server + testFile);
+            long timeTaken = measureDownloadSpeed(server + testFile, 128 * 1024, 2000); // 128KB, 2s timeout
             System.out.println(server + ": " + timeTaken);
             if (timeTaken < fastestTime) {
                 fastestTime = timeTaken;
@@ -251,14 +274,32 @@ public class Downloader implements Runnable {
             }
         }
 
+        if (fastestServer == null) {
+            ErrorDialog error = new ErrorDialog();
+            error.errorDialog(frame, "Server Test Failed", "Could not reach any download server. Please check your internet connection.", 0);
+            // fallback to first server
+            return servers[0];
+        }
         return fastestServer;
     }
 
     private static long measureDownloadSpeed(String fileUrl) {
+        return measureDownloadSpeed(fileUrl, 128 * 1024, 2000);
+    }
+
+    // Overloaded: limit bytes and timeout
+    private static long measureDownloadSpeed(String fileUrl, int maxBytes, int timeoutMs) {
         long startTime = System.nanoTime();
+        int totalRead = 0;
         try (BufferedInputStream in = new BufferedInputStream(new URL(fileUrl).openStream())) {
             byte[] dataBuffer = new byte[1024];
-            while (in.read(dataBuffer, 0, 1024) != -1) {}
+            int read;
+            long start = System.currentTimeMillis();
+            while ((read = in.read(dataBuffer, 0, Math.min(1024, maxBytes - totalRead))) != -1) {
+                totalRead += read;
+                if (totalRead >= maxBytes) break;
+                if (System.currentTimeMillis() - start > timeoutMs) break;
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return Long.MAX_VALUE; // If there's an error, return a large number to skip this server

@@ -23,6 +23,34 @@ import java.io.IOException;
 
 
 public class Helpers {
+
+        // Create a Windows shortcut (.lnk) using PowerShell
+        public static void createWindowsShortcut(String exePath, String shortcutPath, String name) throws IOException, InterruptedException {
+            String psCommand =
+                    "$WshShell = New-Object -ComObject WScript.Shell; " +
+                    "$Shortcut = $WshShell.CreateShortcut(\"" + shortcutPath.replace("\\", "\\\\") + "\"); " +
+                    "$Shortcut.TargetPath = \"" + exePath.replace("\\", "\\\\") + "\"; " +
+                    "$Shortcut.Save();";
+            ProcessBuilder pb = new ProcessBuilder("powershell.exe", "-Command", psCommand);
+            pb.inheritIO();
+            Process p = pb.start();
+            p.waitFor();
+        }
+
+        // Try to pin to taskbar (Windows 10+), best effort
+        public static void pinToTaskbar(String exePath) throws IOException, InterruptedException {
+            // This is a best effort, as pinning programmatically is not officially supported
+            // This uses PowerShell to invoke the shell verb
+            String psCommand =
+                    "$shell = New-Object -ComObject Shell.Application; " +
+                    "$folder = $shell.Namespace((Split-Path -Parent \"" + exePath.replace("\\", "\\\\") + "\")); " +
+                    "$item = $folder.ParseName((Split-Path -Leaf \"" + exePath.replace("\\", "\\\\") + "\")); " +
+                    "$item.InvokeVerb('Pin to Tas&kbar');";
+            ProcessBuilder pb = new ProcessBuilder("powershell.exe", "-Command", psCommand);
+            pb.inheritIO();
+            Process p = pb.start();
+            p.waitFor();
+        }
     static boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
     static boolean mac = System.getProperty("os.name").toLowerCase().startsWith("mac");
     static boolean linux = System.getProperty("os.name").toLowerCase().contains("linux");
