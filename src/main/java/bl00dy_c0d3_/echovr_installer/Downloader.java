@@ -161,20 +161,16 @@ public class Downloader implements Runnable {
                 UnzipFile.unzip(frame, frameMain, localFilePath + "\\" + filename, localFilePath);
                 JOptionPane.showMessageDialog(frame, "<html>Installation is done. Path is:<br>" + localFilePath + "</html>", "Notification", JOptionPane.INFORMATION_MESSAGE);
 
-                // Suggest adding to Start and Taskbar
+                // Suggest adding to Start, Taskbar, Quick Launch
                 String exePath = localFilePath + "\\ready-at-dawn-echo-arena\\bin\\win10\\echovr.exe";
                 int result = JOptionPane.showConfirmDialog(frame,
-                        "Would you like to add Echo VR to your Start Menu and Taskbar?\n\nThis will add: " + exePath,
+                        "Would you like to add Echo VR to your Start Menu and Desktop?\n\nThis will add: " + exePath,
                         "Add Echo VR Shortcut?",
                         JOptionPane.YES_NO_OPTION);
                 if (result == JOptionPane.YES_OPTION) {
                     try {
-                        // Add to Start Menu
-                        String startShortcut = System.getenv("APPDATA") + "\\Microsoft\\Windows\\Start Menu\\Programs\\Echo VR.lnk";
-                        Helpers.createWindowsShortcut(exePath, startShortcut, "Echo VR");
-                        // Pin to Taskbar (Windows 10+ only, best effort)
-                        Helpers.pinToTaskbar(exePath);
-                        JOptionPane.showMessageDialog(frame, "Shortcut added to Start Menu.\nYou may need to pin it to Taskbar manually if it does not appear.", "Shortcut Created", JOptionPane.INFORMATION_MESSAGE);
+                        Helpers.addShortcutsAll(exePath, "Echo VR");
+                        JOptionPane.showMessageDialog(frame, "Shortcuts added to Start Menu and Desktop.", "Shortcut Created", JOptionPane.INFORMATION_MESSAGE);
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(frame, "Failed to create shortcut: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
@@ -252,7 +248,7 @@ public class Downloader implements Runnable {
         servers[1] = "https://evr.echo.taxi/";
         String testFile = "randomDownloadTestFile";
 
-        labelProgress.setText("Server Test");
+        labelProgress.setText("Testing download servers...");
         frame.repaint();
         System.out.println("Server Test started");
 
